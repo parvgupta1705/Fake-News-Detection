@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.DS_Store
+models/*.joblib
+data/*.csv
+!data/README.md
+.streamlit/secrets.toml
