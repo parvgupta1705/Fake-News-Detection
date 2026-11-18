@@ -44,27 +44,46 @@ with st.sidebar:
 
 tab_detect, tab_eval, tab_about = st.tabs(["🔎 Detect news", "📊 Model evaluation", "ℹ️ About the project"])
 
+def load_sample_article():
+    st.session_state["headline_input"] = (
+        "Officials announce a new public transport plan after consultation"
+    )
+
+    st.session_state["article_input"] = (
+        "City officials announced a proposed public transport plan on Tuesday. "
+        "The proposal will be reviewed by the local council next month, "
+        "according to the published meeting notes. "
+        "Residents can submit comments through the council's public "
+        "consultation process."
+    )
+
 with tab_detect:
     left, right = st.columns([1.25, 0.75], gap="large")
     with left:
-        headline = st.text_input("News headline", placeholder="Paste the headline here…")
-        article = st.text_area("Article text", height=240, placeholder="Paste the article body here…")
+        headline = st.text_input(
+            "News headline",
+            placeholder="Paste the headline here…",
+            key="headline_input"
+        )
+        article = st.text_area(
+            "Article text",
+            height=240,
+            placeholder="Paste the article body here…",
+            key="article_input"
+        )
         c1, c2 = st.columns(2)
         with c1:
             source = st.text_input("Publisher / source (optional)", placeholder="e.g. Example News")
         with c2:
             source_reputation = st.selectbox("Known source reputation (optional)", ["Unknown", "Established / verified", "Unverified / unfamiliar"])
         submitted = st.button("Analyze article", type="primary", use_container_width=True)
-        if st.button("Load sample article", use_container_width=True):
-            st.session_state["sample_loaded"] = True
-            st.rerun()
-        if st.session_state.get("sample_loaded", False):
-            headline = "Officials announce a new public transport plan after consultation"
-            article = ("City officials announced a proposed public transport plan on Tuesday. "
-                       "The proposal will be reviewed by the local council next month, according to the published meeting notes. "
-                       "Residents can submit comments through the council's public consultation process.")
-            st.session_state["sample_loaded"] = False
-            st.info("Sample loaded. Click Analyze article to run it.")
+        
+        st.button(
+            "Load sample article",
+            use_container_width=True,
+            on_click=load_sample_article
+        )
+
     with right:
         st.markdown("#### How to read the result")
         st.write("- **REAL-like / FAKE-like** describes patterns learned from the training corpus.")
@@ -92,12 +111,27 @@ with tab_detect:
                 st.write(", ".join(f"`{t}`" for t in terms))
             else:
                 st.write("No clear individual terms could be extracted for this prediction.")
+            
             with st.expander("Compare all five classifiers"):
                 rows = []
+
+                # Convert raw text into TF-IDF numerical features
+                text_vector = bundle["vectorizer"].transform([text])
+
                 for name, model in bundle["models"].items():
-                    p = model.predict([text])[0]
-                    rows.append({"Classifier": name, "Prediction": p})
-                st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+                    prediction = model.predict(text_vector)[0]
+
+                    rows.append({
+                        "Classifier": name,
+                        "Prediction": prediction
+                    })
+
+                st.dataframe(
+                    pd.DataFrame(rows),
+                    hide_index=True,
+                    use_container_width=True
+                )
+
             with st.expander("Show preprocessing preview"):
                 st.code(" ".join(text.lower().split()), language="text")
                 st.caption("The TF-IDF vectorizer handles tokenization and feature weighting during inference.")
